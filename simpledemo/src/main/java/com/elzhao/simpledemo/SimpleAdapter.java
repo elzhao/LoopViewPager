@@ -1,7 +1,6 @@
 package com.elzhao.simpledemo;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -43,9 +42,9 @@ public class SimpleAdapter extends LoopPagerAdapter<SimpleAdapter.SimpleHolder> 
 
         TextView tvContent;
 
-        SimpleHolder(@NonNull View itemView) {
+        SimpleHolder(View itemView) {
             super(itemView);
-            tvContent = itemView.findViewById(R.id.tv_content);
+            tvContent = (TextView) itemView.findViewById(R.id.tv_content);
         }
     }
 }

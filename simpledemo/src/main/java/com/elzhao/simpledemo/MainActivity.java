@@ -1,6 +1,6 @@
 package com.elzhao.simpledemo;
 
-import android.support.v7.app.AppCompatActivity;
+import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -10,7 +10,7 @@ import com.elzhao.loopviewpager.ScaleTransfer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements LoopViewPager.OnPageChangeListener {
+public class MainActivity extends Activity implements LoopViewPager.OnPageChangeListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity implements LoopViewPager.OnP
             mDataList.add(String.valueOf(i));
         }
 
-        mLoopViewPager = findViewById(R.id.loopViewPager);
+        mLoopViewPager = (LoopViewPager) findViewById(R.id.loopViewPager);
         mAdapter = new SimpleAdapter(this, mDataList);
         mLoopViewPager.setAdapter(mAdapter);
         mLoopViewPager.addOnPageChangeListener(this);

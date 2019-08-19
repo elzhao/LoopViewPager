@@ -2,7 +2,6 @@ package com.elzhao.loopviewpager;
 
 import android.content.Context;
 import android.database.DataSetObserver;
-import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -114,7 +113,7 @@ public class LoopViewPager extends ViewGroup {
         }
         int widthMode = MeasureSpec.getMode(widthMeasureSpec);
         int heightMode = MeasureSpec.getMode(widthMeasureSpec);
-        int width = MeasureSpec.getSize(widthMeasureSpec) - getPaddingStart() - getPaddingEnd();
+        int width = MeasureSpec.getSize(widthMeasureSpec) - getPaddingLeft() - getPaddingRight();
         int height = MeasureSpec.getSize(heightMeasureSpec) - getPaddingTop() - getPaddingBottom();
         int itemMaxWidth = width / COUNT_VISIBLE;
         setMeasuredDimension(width, height);
@@ -506,7 +505,7 @@ public class LoopViewPager extends ViewGroup {
         private int dCenterX;
         private int index;
         private int type;
-        public ViewHolder(@NonNull View itemView) {
+        public ViewHolder(View itemView) {
             this.itemView = itemView;
         }
 
