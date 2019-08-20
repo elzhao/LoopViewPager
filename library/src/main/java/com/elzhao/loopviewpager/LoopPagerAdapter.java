@@ -6,6 +6,8 @@ import android.view.ViewGroup;
 
 public abstract class LoopPagerAdapter<VH extends LoopViewPager.ViewHolder> {
 
+    private static final int DEFAULT_COUNT = 3;
+
     private final DataSetObservable mDataSetObservable = new DataSetObservable();
 
     void registerDataSetObserver(DataSetObserver observer) {
@@ -38,5 +40,14 @@ public abstract class LoopPagerAdapter<VH extends LoopViewPager.ViewHolder> {
 
     public int getItemViewType(int position) {
         return 0;
+    }
+
+    /**
+     * 获取每页显示item数，默认每页显示三个item
+     * @return
+     *          返回item数
+     */
+    public int getItemCountInPage() {
+        return DEFAULT_COUNT;
     }
 }

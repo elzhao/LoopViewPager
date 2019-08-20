@@ -19,8 +19,6 @@ import java.util.List;
 
 public class LoopViewPager extends ViewGroup {
 
-    private static final int COUNT_VISIBLE = 3;
-
     private static final float FRICTION = 10.0f;
     private static final float MAX_SPEED = 6.0f;
 
@@ -40,6 +38,7 @@ public class LoopViewPager extends ViewGroup {
     private PageTransformer mPageTransformer;
     private boolean mIsBeingDragged;
     private int mCurItem;// Index of currently displayed page.
+    private int mItemCountInPage = 3;// Count of item show in one page.
 
     private static final Interpolator sInterpolator = new Interpolator() {
         public float getInterpolation(float t) {
@@ -76,7 +75,7 @@ public class LoopViewPager extends ViewGroup {
             adapter.registerDataSetObserver(mDataSetObserver);
         }
         mDataChanged = true;
-
+        mItemCountInPage = mAdapter == null ? 0 : mAdapter.getItemCountInPage();
         resetPagerState();
     }
 
@@ -108,19 +107,19 @@ public class LoopViewPager extends ViewGroup {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         Lg.i();
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        if (mAdapter == null || getChildCount() == 0) {
+        if (mAdapter == null) {
             return;
         }
         int widthMode = MeasureSpec.getMode(widthMeasureSpec);
         int heightMode = MeasureSpec.getMode(widthMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec) - getPaddingLeft() - getPaddingRight();
         int height = MeasureSpec.getSize(heightMeasureSpec) - getPaddingTop() - getPaddingBottom();
-        int itemMaxWidth = width / COUNT_VISIBLE;
+        int itemWidth = width / mItemCountInPage;
         setMeasuredDimension(width, height);
 
         for (int i = 0; i < getChildCount(); ++i) {
             View view = getChildAt(i);
-            measureChild(view, MeasureSpec.makeMeasureSpec(itemMaxWidth, widthMode), MeasureSpec.makeMeasureSpec(heightMode, height));
+            measureChild(view, MeasureSpec.makeMeasureSpec(itemWidth, widthMode), MeasureSpec.makeMeasureSpec(height, heightMode));
         }
     }
 
@@ -150,7 +149,7 @@ public class LoopViewPager extends ViewGroup {
     }
 
     private void layoutChild(ViewHolder vh) {
-        int itemWidth = getWidth() / COUNT_VISIBLE;
+        int itemWidth = getWidth() / mItemCountInPage;
         int itemHeight = getHeight();
         int left = (itemWidth - vh.itemView.getMeasuredWidth()) / 2 + vh.position * itemWidth;
         int top = (itemHeight - vh.itemView.getMeasuredHeight()) / 2;
@@ -164,7 +163,7 @@ public class LoopViewPager extends ViewGroup {
      */
     private void updateShowList() {
         int firstPos = calculateFirstPosition();
-        int lastPos = firstPos + COUNT_VISIBLE + 2;
+        int lastPos = firstPos + mItemCountInPage + 2;
 
         Collections.sort(mShowViewList, new Comparator<ViewHolder>() {
             @Override
@@ -205,7 +204,7 @@ public class LoopViewPager extends ViewGroup {
         }
         int centerX = getScrollX() + getWidth() / 2;
         for (ViewHolder vh:mShowViewList) {
-            vh.dCenterX = centerX - (2 * vh.position + 1) * getWidth() / COUNT_VISIBLE / 2;
+            vh.dCenterX = centerX - (2 * vh.position + 1) * getWidth() / mItemCountInPage / 2;
             vh.dCenterX = Math.abs(vh.dCenterX);
         }
     }
@@ -220,7 +219,7 @@ public class LoopViewPager extends ViewGroup {
      */
     private int calculateFirstPosition() {
         int scrollX = getScrollX();
-        int itemWidth = getWidth() / COUNT_VISIBLE;
+        int itemWidth = getWidth() / mItemCountInPage;
         int firstPos = scrollX / itemWidth - 1;
         if (scrollX < 0) {
             firstPos --;
@@ -283,7 +282,7 @@ public class LoopViewPager extends ViewGroup {
     private void updateViewHolderState() {
         int centerX = getScrollX() + getWidth() / 2;
         for (ViewHolder vh:mShowViewList) {
-            vh.dCenterX = centerX - (2 * vh.position + 1) * getWidth() / COUNT_VISIBLE / 2;
+            vh.dCenterX = centerX - (2 * vh.position + 1) * getWidth() / mItemCountInPage / 2;
             vh.dCenterX = Math.abs(vh.dCenterX);
         }
         Collections.sort(mShowViewList, new Comparator<ViewHolder>() {
@@ -352,7 +351,7 @@ public class LoopViewPager extends ViewGroup {
 
     private void touchEnded() {
         int scrollX = getScrollX();
-        int itemWidth = getWidth() / COUNT_VISIBLE;
+        int itemWidth = getWidth() / mItemCountInPage;
 
         mVelocityTracker.computeCurrentVelocity(1000);
         float speed = mVelocityTracker.getXVelocity() / getWidth();
@@ -395,7 +394,7 @@ public class LoopViewPager extends ViewGroup {
     private void onPagedScrolled() {
         if (mPageTransformer != null) {
             final int scrollX = getScrollX();
-            int itemWidth = getWidth() / COUNT_VISIBLE;
+            int itemWidth = getWidth() / mItemCountInPage;
             for (ViewHolder vh:mShowViewList) {
                 final View child = vh.itemView;
                 final float transformPos = (float) (vh.position * itemWidth - scrollX) / getWidth();
@@ -424,7 +423,7 @@ public class LoopViewPager extends ViewGroup {
      */
     public void setCurrentItem(int item, boolean smoothScroll) {
         int scrollX = getScrollX();
-        int itemWidth = getWidth() / COUNT_VISIBLE;
+        int itemWidth = getWidth() / mItemCountInPage;
         int firstVisiblePosition = scrollX / itemWidth;
         if (scrollX < 0) {
             firstVisiblePosition --;
@@ -435,7 +434,7 @@ public class LoopViewPager extends ViewGroup {
     }
 
     private void setCurrentItemInternal(int position, boolean smoothScroll) {
-        int itemWidth = getWidth() / COUNT_VISIBLE;
+        int itemWidth = getWidth() / mItemCountInPage;
         int desScrollX = position * itemWidth;
         int dx = desScrollX - getScrollX();
         if (smoothScroll) {
