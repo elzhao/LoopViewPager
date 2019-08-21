@@ -1,5 +1,9 @@
 # LoopViewPager
-LoopViewPager
+### 自定义控件目的
+用于在Android5.0以下环境实现如下Demo效果。
+
+### Demo
+![image](https://github.com/elzhao/LoopViewPager/blob/master/demo.gif)
 
 ### 添加到项目中
 
