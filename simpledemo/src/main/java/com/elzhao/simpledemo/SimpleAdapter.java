@@ -38,6 +38,11 @@ public class SimpleAdapter extends LoopPagerAdapter<SimpleAdapter.SimpleHolder> 
         viewHolder.tvContent.setText(content);
     }
 
+    @Override
+    public int getItemCountInPage() {
+        return 3;
+    }
+
     class SimpleHolder extends LoopViewPager.ViewHolder{
 
         TextView tvContent;

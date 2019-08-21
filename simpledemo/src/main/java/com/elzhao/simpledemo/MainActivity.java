@@ -2,10 +2,10 @@ package com.elzhao.simpledemo;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.elzhao.loopviewpager.LoopViewPager;
 import com.elzhao.loopviewpager.ScaleTransfer;
+import com.elzhao.loopviewpager.log.Lg;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +22,7 @@ public class MainActivity extends Activity implements LoopViewPager.OnPageChange
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        Lg.setModuleName(TAG);
         for (int i = 0; i < 20; i ++) {
             mDataList.add(String.valueOf(i));
         }
@@ -42,6 +42,6 @@ public class MainActivity extends Activity implements LoopViewPager.OnPageChange
 
     @Override
     public void onPageSelected(int position) {
-        Log.i(TAG, "onPageSelected position: " + position);
+        Lg.i("onPageSelected position: " + position);
     }
 }

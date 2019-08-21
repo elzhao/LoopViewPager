@@ -111,6 +111,16 @@ public class LoopViewPager extends ViewGroup {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         mFirstLayout = true;
+        Lg.i();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        super.onWindowFocusChanged(hasWindowFocus);
+        Lg.i("hasWindowFocus: " + hasWindowFocus);
+        if (hasWindowFocus) {
+            requestLayout();
+        }
     }
 
     @Override
@@ -347,7 +357,6 @@ public class LoopViewPager extends ViewGroup {
     }
 
     private void touchMoved(float x) {
-        Lg.i();
         int dx = (int) (mLastMotionX - x);
         if (dx != 0) {
             int targetX = dx + getScrollX();
@@ -400,7 +409,6 @@ public class LoopViewPager extends ViewGroup {
         super.scrollTo(x, y);
         onPagedScrolled();
         boolean needRequestLayout = needRequestLayout();
-        Lg.i("needRequestLayout: " + needRequestLayout + " - scrollX: " + getScrollX());
         if (needRequestLayout) {
             updateShowList();
             addChildViews();
