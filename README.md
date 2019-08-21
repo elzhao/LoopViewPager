@@ -1,10 +1,14 @@
 # LoopViewPager
 适用于在Android4.X及以下环境实现如下效果。
 
+---
+
 ### 如下效果
 ![image](https://github.com/elzhao/LoopViewPager/blob/master/demo.gif)
 
 ps：在Android4.X及以下环境使用ViewPager、RecyclerView等难以实现中间的图片显示在左右两边的前面效果，在Android5.0及以上环境通过设置View.setTranslationZ()比较容易。
+
+---
 
 ### 添加到项目中
 
@@ -21,6 +25,8 @@ dependencies {
     implementation 'com.github.elzhao:LoopViewPager:v1.0'
 }
 ```
+
+---
 
 ### 代码示例
 XML：
@@ -123,16 +129,19 @@ public class SimpleAdapter extends LoopPagerAdapter<SimpleAdapter.SimpleHolder> 
     }
 }
 ```
+
+---
+
 ### 其他API
 ###### 1、LoopPagerAdapter
-> 重写getItemCountInPage方法，设置每页显示item个数；
+- 重写getItemCountInPage方法，设置每页显示item个数；
 
-> 客户端调用notifyDataSetChanged()更新数据;
+- 客户端调用notifyDataSetChanged()更新数据;
 
-> 重写getItemViewType方法，实现不同类型item显示;
+- 重写getItemViewType方法，实现不同类型item显示;
 
 ###### 2、LoopViewPager.PageTransformer
-> 实现接口可自定义滑动效果，使用方法与ViewPager.PageTransformer相同；
+- 实现接口可自定义滑动效果，使用方法与ViewPager.PageTransformer相同；
 
 ###### 3、LoopViewPager
-> setCurrentItem(int item)，跳转到需要显示的项。
+- setCurrentItem(int item)，跳转到需要显示的项。
