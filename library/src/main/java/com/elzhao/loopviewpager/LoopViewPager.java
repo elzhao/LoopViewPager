@@ -28,6 +28,9 @@ public class LoopViewPager extends ViewGroup {
     private List<ViewHolder> mCacheViewList = new ArrayList<>();
     private List<ViewHolder> mShowViewList = new ArrayList<>();
     private float mLastMotionX;
+    private int mWidth;
+    private int mHeight;
+    private int mChildMaxWidth;
 
     private List<OnPageChangeListener> mPageChangeListeners = new ArrayList<>();
     /**
@@ -38,7 +41,9 @@ public class LoopViewPager extends ViewGroup {
     private PageTransformer mPageTransformer;
     private boolean mIsBeingDragged;
     private int mCurItem;// Index of currently displayed page.
-    private int mItemCountInPage = 3;// Count of item show in one page.
+    private int mItemCountInPage;// Count of item show in one page.
+    private boolean mScrollPending;
+    private boolean mFirstLayout = true;
 
     private static final Interpolator sInterpolator = new Interpolator() {
         public float getInterpolation(float t) {
@@ -73,9 +78,12 @@ public class LoopViewPager extends ViewGroup {
                 mDataSetObserver = new AdapterDataSetObserver();
             }
             adapter.registerDataSetObserver(mDataSetObserver);
+            mFirstLayout = true;
         }
         mDataChanged = true;
+        mScrollPending = false;
         mItemCountInPage = mAdapter == null ? 0 : mAdapter.getItemCountInPage();
+
         resetPagerState();
     }
 
@@ -83,8 +91,7 @@ public class LoopViewPager extends ViewGroup {
         mCacheViewList.clear();
         mShowViewList.clear();
         removeAllViews();
-
-        if (mAdapter.getCount() > 0) {
+        if (mAdapter != null && mAdapter.getCount() > 0) {
             firstAddChildViews();
         }
         scrollTo(0, 0);
@@ -93,14 +100,17 @@ public class LoopViewPager extends ViewGroup {
     }
 
     private void firstAddChildViews() {
-        if (mDataChanged) {
-            int width = getWidth();
-            if (width > 0) {
-                mDataChanged = false;
-                updateShowList();
-                addChildViews();
-            }
+        if (mDataChanged && !mFirstLayout) {
+            mDataChanged = false;
+            updateShowList();
+            addChildViews();
         }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        mFirstLayout = true;
     }
 
     @Override
@@ -116,6 +126,9 @@ public class LoopViewPager extends ViewGroup {
         int height = MeasureSpec.getSize(heightMeasureSpec) - getPaddingTop() - getPaddingBottom();
         int itemWidth = width / mItemCountInPage;
         setMeasuredDimension(width, height);
+        mWidth = width;
+        mHeight = height;
+        mChildMaxWidth = itemWidth;
 
         for (int i = 0; i < getChildCount(); ++i) {
             View view = getChildAt(i);
@@ -129,6 +142,11 @@ public class LoopViewPager extends ViewGroup {
         if (mAdapter == null || mAdapter.getCount() <= 0) {
             return;
         }
+        mFirstLayout = false;
+        if (mScrollPending) {
+            mScrollPending = false;
+            setCurrentItem(mCurItem, false);
+        }
         firstAddChildViews();
         layoutChildViews();
         onPagedScrolled();
@@ -137,22 +155,20 @@ public class LoopViewPager extends ViewGroup {
     private void addChildViews() {
         removeAllViews();
         updateViewHolderState();
-        for (ViewHolder vh:mShowViewList) {
+        for (ViewHolder vh : mShowViewList) {
             addView(vh.itemView);
         }
     }
 
     private void layoutChildViews() {
-        for (ViewHolder vh:mShowViewList) {
+        for (ViewHolder vh : mShowViewList) {
             layoutChild(vh);
         }
     }
 
     private void layoutChild(ViewHolder vh) {
-        int itemWidth = getWidth() / mItemCountInPage;
-        int itemHeight = getHeight();
-        int left = (itemWidth - vh.itemView.getMeasuredWidth()) / 2 + vh.position * itemWidth;
-        int top = (itemHeight - vh.itemView.getMeasuredHeight()) / 2;
+        int left = (mChildMaxWidth - vh.itemView.getMeasuredWidth()) / 2 + vh.position * mChildMaxWidth;
+        int top = (mHeight - vh.itemView.getMeasuredHeight()) / 2;
         int right = left + vh.itemView.getMeasuredWidth();
         int bottom = top + vh.itemView.getMeasuredHeight();
         vh.itemView.layout(left, top, right, bottom);
@@ -202,11 +218,7 @@ public class LoopViewPager extends ViewGroup {
                 mShowViewList.add(queryOrCreateViewHolder(i));
             }
         }
-        int centerX = getScrollX() + getWidth() / 2;
-        for (ViewHolder vh:mShowViewList) {
-            vh.dCenterX = centerX - (2 * vh.position + 1) * getWidth() / mItemCountInPage / 2;
-            vh.dCenterX = Math.abs(vh.dCenterX);
-        }
+        updateViewHolderState();
     }
 
     /**
@@ -214,15 +226,13 @@ public class LoopViewPager extends ViewGroup {
      * (这个位置需要经过转换才能得到实际Item位置)
      * {@link #calculateValidPosition(int)}
      *
-     * @return
-     *          第一个View的实际位置
+     * @return 第一个View的实际位置
      */
     private int calculateFirstPosition() {
         int scrollX = getScrollX();
-        int itemWidth = getWidth() / mItemCountInPage;
-        int firstPos = scrollX / itemWidth - 1;
+        int firstPos = scrollX / mChildMaxWidth - 1;
         if (scrollX < 0) {
-            firstPos --;
+            firstPos--;
         }
         return firstPos;
     }
@@ -230,10 +240,9 @@ public class LoopViewPager extends ViewGroup {
     /**
      * 根据实际位置计算出Item的有效位置。
      * {@link #calculateFirstPosition()}
-     * @param position
-     *          实际位置
-     * @return
-     *          有效位置
+     *
+     * @param position 实际位置
+     * @return 有效位置
      */
     private int calculateValidPosition(int position) {
         final int maxCount = mAdapter.getCount();
@@ -250,16 +259,15 @@ public class LoopViewPager extends ViewGroup {
     /**
      * 根据实际位置获取ViewHolder对象，先从mCacheViewList缓存列表中查询，
      * 如果未找到合适的就重新创建。
-     * @param position
-     *          实际位置
-     * @return
-     *          ViewHolder对象
+     *
+     * @param position 实际位置
+     * @return ViewHolder对象
      */
     private ViewHolder queryOrCreateViewHolder(int position) {
         int validPos = calculateValidPosition(position);
         int type = mAdapter.getItemViewType(validPos);
         ViewHolder viewHolder = null;
-        for (ViewHolder vh:mCacheViewList) {
+        for (ViewHolder vh : mCacheViewList) {
             if (type == vh.type) {
                 viewHolder = vh;
             }
@@ -280,9 +288,9 @@ public class LoopViewPager extends ViewGroup {
      * 主要更新ViewHolder.dCenterX值，并重新排序。
      */
     private void updateViewHolderState() {
-        int centerX = getScrollX() + getWidth() / 2;
-        for (ViewHolder vh:mShowViewList) {
-            vh.dCenterX = centerX - (2 * vh.position + 1) * getWidth() / mItemCountInPage / 2;
+        int centerX = getScrollX() + mWidth / 2;
+        for (ViewHolder vh : mShowViewList) {
+            vh.dCenterX = centerX - mChildMaxWidth * (2 * vh.position + 1) / 2;
             vh.dCenterX = Math.abs(vh.dCenterX);
         }
         Collections.sort(mShowViewList, new Comparator<ViewHolder>() {
@@ -295,8 +303,8 @@ public class LoopViewPager extends ViewGroup {
 
     /**
      * 获取显示在中心View的位置。
-     * @return
-     *          显示在中心View的实际位置
+     *
+     * @return 显示在中心View的实际位置
      */
     private int getCenterPosition() {
         Collections.sort(mShowViewList, new Comparator<ViewHolder>() {
@@ -351,10 +359,9 @@ public class LoopViewPager extends ViewGroup {
 
     private void touchEnded() {
         int scrollX = getScrollX();
-        int itemWidth = getWidth() / mItemCountInPage;
 
         mVelocityTracker.computeCurrentVelocity(1000);
-        float speed = mVelocityTracker.getXVelocity() / getWidth();
+        float speed = mVelocityTracker.getXVelocity() / mWidth;
         if (speed > MAX_SPEED) {
             speed = MAX_SPEED;
         } else if (speed < -MAX_SPEED) {
@@ -364,18 +371,28 @@ public class LoopViewPager extends ViewGroup {
         if (speed > 0) {
             delta = -delta;
         }
-        float targetX = scrollX + delta * itemWidth;
-        int nextPosition = CommonUtils.rounding(targetX / itemWidth);
+        float targetX = scrollX + delta * mChildMaxWidth;
+        int nextPosition = rounding(targetX / mChildMaxWidth);
 
         mVelocityTracker.clear();
         mVelocityTracker.recycle();
         mVelocityTracker = null;
 
-        Lg.i("speed: " + speed + " - delta: " + delta + " - nextPosition: " + nextPosition);
         if (mIsBeingDragged) {
             setCurrentItemInternal(nextPosition, true);
         }
         mIsBeingDragged = false;
+    }
+
+    private static int rounding(float value) {
+        float temp = value - (int) value;
+        int result = (int) value;
+        if (temp >= 0.5) {
+            result++;
+        } else if (temp <= -0.5) {
+            result--;
+        }
+        return result;
     }
 
     @Override
@@ -394,10 +411,9 @@ public class LoopViewPager extends ViewGroup {
     private void onPagedScrolled() {
         if (mPageTransformer != null) {
             final int scrollX = getScrollX();
-            int itemWidth = getWidth() / mItemCountInPage;
-            for (ViewHolder vh:mShowViewList) {
+            for (ViewHolder vh : mShowViewList) {
                 final View child = vh.itemView;
-                final float transformPos = (float) (vh.position * itemWidth - scrollX) / getWidth();
+                final float transformPos = (float) (vh.position * mChildMaxWidth - scrollX) / mWidth;
                 mPageTransformer.transformPage(child, transformPos);
             }
         }
@@ -405,8 +421,8 @@ public class LoopViewPager extends ViewGroup {
 
     /**
      * 根据中心位置View是否变化来判断是否要重新刷新布局。
-     * @return
-     *          返回是否要刷新布局
+     *
+     * @return 返回是否要刷新布局
      */
     private boolean needRequestLayout() {
         int oldCenterPos = getCenterPosition();
@@ -416,17 +432,40 @@ public class LoopViewPager extends ViewGroup {
     }
 
     /**
-     * Set the currently selected page.
+     * Set the currently selected page. If the ViewPager has already been through its first
+     * layout with its current adapter there will be a smooth animated transition between
+     * the current item and the specified item.
      *
      * @param item Item index to select
+     */
+    public void setCurrentItem(int item) {
+        setCurrentItem(item, !mFirstLayout);
+    }
+
+    /**
+     * Set the currently selected page.
+     *
+     * @param item         Item index to select
      * @param smoothScroll True to smoothly scroll to the new item, false to transition immediately
      */
     public void setCurrentItem(int item, boolean smoothScroll) {
+        if (mAdapter == null || mAdapter.getCount() == 0) {
+            return;
+        }
+        if (item < 0) {
+            item = 0;
+        } else if (item >= mAdapter.getCount()) {
+            item = mAdapter.getCount() - 1;
+        }
+        mCurItem = item;
+        if (mFirstLayout) {
+            mScrollPending = true;
+            return;
+        }
         int scrollX = getScrollX();
-        int itemWidth = getWidth() / mItemCountInPage;
-        int firstVisiblePosition = scrollX / itemWidth;
+        int firstVisiblePosition = scrollX / mChildMaxWidth;
         if (scrollX < 0) {
-            firstVisiblePosition --;
+            firstVisiblePosition--;
         }
         int firstVisibleValidPosition = calculateValidPosition(firstVisiblePosition);
         int actualDestPosition = firstVisiblePosition + item - firstVisibleValidPosition;
@@ -434,9 +473,9 @@ public class LoopViewPager extends ViewGroup {
     }
 
     private void setCurrentItemInternal(int position, boolean smoothScroll) {
-        int itemWidth = getWidth() / mItemCountInPage;
-        int desScrollX = position * itemWidth;
+        int desScrollX = position * mChildMaxWidth;
         int dx = desScrollX - getScrollX();
+        mScroller.abortAnimation();
         if (smoothScroll) {
             mScroller.startScroll(getScrollX(), 0, dx, 0, 300);
         } else {
@@ -444,7 +483,7 @@ public class LoopViewPager extends ViewGroup {
         }
         invalidate();
         mCurItem = calculateValidPosition(position);
-        notifyPageSelected(mCurItem);
+        dispatchOnPageSelected(mCurItem);
     }
 
     @Override
@@ -475,15 +514,15 @@ public class LoopViewPager extends ViewGroup {
     }
 
     private void bindViewHolder() {
-        for (ViewHolder vh:mShowViewList) {
+        for (ViewHolder vh : mShowViewList) {
             int validPos = calculateValidPosition(vh.position);
             //noinspection unchecked
             mAdapter.onBindViewHolder(vh, validPos);
         }
     }
 
-    private void notifyPageSelected(int page) {
-        for (OnPageChangeListener listener:mPageChangeListeners) {
+    private void dispatchOnPageSelected(int page) {
+        for (OnPageChangeListener listener : mPageChangeListeners) {
             listener.onPageSelected(page);
         }
     }
@@ -502,8 +541,8 @@ public class LoopViewPager extends ViewGroup {
         private final View itemView;
         private int position;
         private int dCenterX;
-        private int index;
         private int type;
+
         public ViewHolder(View itemView) {
             this.itemView = itemView;
         }
@@ -538,7 +577,7 @@ public class LoopViewPager extends ViewGroup {
         /**
          * Apply a property transformation to the given page.
          *
-         * @param page Apply the transformation to this page
+         * @param page     Apply the transformation to this page
          * @param position Position of page relative to the current front-and-center
          *                 position of the pager. 0 is front and center. 1 is one full
          *                 page position to the right, and -1 is one page position to the left.
