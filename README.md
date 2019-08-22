@@ -4,7 +4,7 @@
 ---
 
 ### 如下效果
-![image](https://github.com/elzhao/LoopViewPager/blob/master/demo.gif)
+![gif](https://github.com/elzhao/LoopViewPager/blob/master/demo.gif)
 
 ps：在Android4.X及以下环境使用ViewPager、RecyclerView等难以实现中间的图片显示在左右两边的前面效果，在Android5.0及以上环境通过设置View.setTranslationZ()比较容易。
 
