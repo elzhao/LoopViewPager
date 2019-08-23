@@ -41,7 +41,7 @@ public class MainActivity extends Activity implements LoopViewPager.OnPageChange
     }
 
     @Override
-    public void onPageSelected(int position) {
-        Lg.i("onPageSelected position: " + position);
+    public void onPageSelected(int position, boolean fromUser) {
+        Lg.i("position: " + position + " - fromUser: " + fromUser);
     }
 }

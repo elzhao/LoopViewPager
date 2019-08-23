@@ -437,7 +437,7 @@ public class LoopViewPager extends ViewGroup {
         mVelocityTracker = null;
 
         if (mIsBeingDragged) {
-            setCurrentItemInternal(nextPosition, true);
+            setCurrentItemInternal(nextPosition, true, true);
         }
         mIsBeingDragged = false;
     }
@@ -526,10 +526,18 @@ public class LoopViewPager extends ViewGroup {
         }
         int firstVisibleValidPosition = calculateValidPosition(firstVisiblePosition);
         int actualDestPosition = firstVisiblePosition + item - firstVisibleValidPosition;
-        setCurrentItemInternal(actualDestPosition, smoothScroll);
+        setCurrentItemInternal(actualDestPosition, smoothScroll, false);
     }
 
-    private void setCurrentItemInternal(int position, boolean smoothScroll) {
+    private void setCurrentItemInternal(int position, boolean smoothScroll, boolean fromUser) {
+        int scrollX = getScrollX();
+        boolean needScroll = position * mChildMaxWidth != scrollX;
+        mCurItem = calculateValidPosition(position);
+        dispatchOnPageSelected(mCurItem, fromUser);
+        if (!needScroll) {
+            setScrollState(SCROLL_STATE_IDLE);
+            return;
+        }
         int desScrollX = position * mChildMaxWidth;
         int dx = desScrollX - getScrollX();
         mScroller.abortAnimation();
@@ -540,8 +548,6 @@ public class LoopViewPager extends ViewGroup {
             scrollTo(desScrollX, getScrollY());
         }
         invalidate();
-        mCurItem = calculateValidPosition(position);
-        dispatchOnPageSelected(mCurItem);
     }
 
     private void setScrollState(int newState) {
@@ -596,9 +602,9 @@ public class LoopViewPager extends ViewGroup {
         }
     }
 
-    private void dispatchOnPageSelected(int page) {
+    private void dispatchOnPageSelected(int page, boolean fromUser) {
         for (OnPageChangeListener listener : mPageChangeListeners) {
-            listener.onPageSelected(page);
+            listener.onPageSelected(page, fromUser);
         }
     }
 
@@ -670,8 +676,9 @@ public class LoopViewPager extends ViewGroup {
          * necessarily complete.
          *
          * @param position Position index of the new selected page.
+         * @param fromUser True if the page change was initiated by the user.
          */
-        void onPageSelected(int position);
+        void onPageSelected(int position, boolean fromUser);
 
     }
 }
