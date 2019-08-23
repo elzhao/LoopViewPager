@@ -7,6 +7,7 @@ import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.animation.Interpolator;
 import android.widget.Scroller;
 
@@ -19,8 +20,26 @@ import java.util.List;
 
 public class LoopViewPager extends ViewGroup {
 
+    /**
+     * Indicates that the pager is in an idle, settled state. The current page
+     * is fully in view and no animation is in progress.
+     */
+    public static final int SCROLL_STATE_IDLE = 0;
+
+    /**
+     * Indicates that the pager is currently being dragged by the user.
+     */
+    public static final int SCROLL_STATE_DRAGGING = 1;
+
+    /**
+     * Indicates that the pager is in the process of settling to a final position.
+     */
+    public static final int SCROLL_STATE_SETTLING = 2;
+
     private static final float FRICTION = 10.0f;
     private static final float MAX_SPEED = 6.0f;
+    private static final int DEFAULT_GUTTER_SIZE = 25;
+    private static final boolean DEBUG = true;
 
     private LoopPagerAdapter mAdapter;
     private AdapterDataSetObserver mDataSetObserver;
@@ -44,6 +63,7 @@ public class LoopViewPager extends ViewGroup {
     private int mItemCountInPage;// Count of item show in one page.
     private boolean mScrollPending;
     private boolean mFirstLayout = true;
+    private int mScrollState = SCROLL_STATE_IDLE;
 
     private static final Interpolator sInterpolator = new Interpolator() {
         public float getInterpolation(float t) {
@@ -66,7 +86,6 @@ public class LoopViewPager extends ViewGroup {
     }
 
     public void setAdapter(LoopPagerAdapter adapter) {
-        Lg.i();
         LoopPagerAdapter old = mAdapter;
         if (old != null) {
             old.unregisterDataSetObserver(mDataSetObserver);
@@ -111,13 +130,13 @@ public class LoopViewPager extends ViewGroup {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         mFirstLayout = true;
-        Lg.i();
+        if (DEBUG) Lg.i();
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasWindowFocus) {
         super.onWindowFocusChanged(hasWindowFocus);
-        Lg.i("hasWindowFocus: " + hasWindowFocus);
+        if (DEBUG) Lg.i("hasWindowFocus: " + hasWindowFocus);
         if (hasWindowFocus) {
             requestLayout();
         }
@@ -125,7 +144,7 @@ public class LoopViewPager extends ViewGroup {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        Lg.i();
+        if (DEBUG) Lg.i();
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         if (mAdapter == null) {
             return;
@@ -148,7 +167,7 @@ public class LoopViewPager extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        Lg.i();
+        if (DEBUG) Lg.i();
         if (mAdapter == null || mAdapter.getCount() <= 0) {
             return;
         }
@@ -328,6 +347,33 @@ public class LoopViewPager extends ViewGroup {
     }
 
     @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        int action = ev.getAction();
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                if (DEBUG) Lg.i("mScrollState: " + mScrollState);
+                mLastMotionX = ev.getX();
+                if (mScrollState == SCROLL_STATE_SETTLING) {
+                    mIsBeingDragged = true;
+                    mScroller.abortAnimation();
+                    requestParentDisallowInterceptTouchEvent(true);
+                }
+                break;
+            case MotionEvent.ACTION_MOVE:
+                final float dx = ev.getX() - mLastMotionX;
+                if (Math.abs(dx) > DEFAULT_GUTTER_SIZE) {
+                    mLastMotionX = ev.getX();
+                    mIsBeingDragged = true;
+                    requestParentDisallowInterceptTouchEvent(true);
+                }
+                break;
+            default:
+                break;
+        }
+        return mIsBeingDragged;
+    }
+
+    @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (mAdapter == null || getChildCount() == 0) {
             return false;
@@ -352,23 +398,26 @@ public class LoopViewPager extends ViewGroup {
             default:
                 break;
         }
-
         return true;
     }
 
     private void touchMoved(float x) {
         int dx = (int) (mLastMotionX - x);
-        if (dx != 0) {
-            int targetX = dx + getScrollX();
-            mIsBeingDragged = true;
-            scrollTo(targetX, 0);
-        }
         mLastMotionX = x;
+        if (dx == 0) {
+            return;
+        }
+        if (!mIsBeingDragged) {
+            mIsBeingDragged = true;
+            requestParentDisallowInterceptTouchEvent(true);
+        }
+        int targetX = dx + getScrollX();
+        setScrollState(SCROLL_STATE_DRAGGING);
+        scrollTo(targetX, 0);
     }
 
     private void touchEnded() {
         int scrollX = getScrollX();
-
         mVelocityTracker.computeCurrentVelocity(1000);
         float speed = mVelocityTracker.getXVelocity() / mWidth;
         if (speed > MAX_SPEED) {
@@ -485,6 +534,7 @@ public class LoopViewPager extends ViewGroup {
         int dx = desScrollX - getScrollX();
         mScroller.abortAnimation();
         if (smoothScroll) {
+            setScrollState(SCROLL_STATE_SETTLING);
             mScroller.startScroll(getScrollX(), 0, dx, 0, 300);
         } else {
             scrollTo(desScrollX, getScrollY());
@@ -494,16 +544,33 @@ public class LoopViewPager extends ViewGroup {
         dispatchOnPageSelected(mCurItem);
     }
 
-    @Override
-    public void computeScroll() {
-        Lg.i();
-        if (!mScroller.computeScrollOffset()) {
-            //计算currX，currY,并检测是否已完成“滚动”
+    private void setScrollState(int newState) {
+        if (DEBUG) Lg.i("newState: " + newState + " - mScrollState: " + mScrollState);
+        if (mScrollState == newState) {
             return;
         }
-        int tempX = mScroller.getCurrX();
-        scrollTo(tempX, 0);
-        invalidate();
+        mScrollState = newState;
+    }
+
+    private void requestParentDisallowInterceptTouchEvent(boolean disallowIntercept) {
+        final ViewParent parent = getParent();
+        if (parent != null) {
+            parent.requestDisallowInterceptTouchEvent(disallowIntercept);
+        }
+    }
+
+    @Override
+    public void computeScroll() {
+        if (mScroller.computeScrollOffset()) {
+            int tempX = mScroller.getCurrX();
+            scrollTo(tempX, 0);
+            invalidate();
+            return;
+        }
+        //计算currX，currY,并检测是否已完成“滚动”
+        if (!mIsBeingDragged) {
+            setScrollState(SCROLL_STATE_IDLE);
+        }
     }
 
     public int getCurrentItem() {

@@ -8,6 +8,7 @@ import android.widget.TextView;
 
 import com.elzhao.loopviewpager.LoopPagerAdapter;
 import com.elzhao.loopviewpager.LoopViewPager;
+import com.elzhao.loopviewpager.log.Lg;
 
 import java.util.List;
 
@@ -33,9 +34,15 @@ public class SimpleAdapter extends LoopPagerAdapter<SimpleAdapter.SimpleHolder> 
     }
 
     @Override
-    public void onBindViewHolder(SimpleAdapter.SimpleHolder viewHolder, int position) {
+    public void onBindViewHolder(SimpleAdapter.SimpleHolder viewHolder, final int position) {
         String content = mDataList.get(position);
         viewHolder.tvContent.setText(content);
+        viewHolder.getItemView().setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Lg.i("position: " + position);
+            }
+        });
     }
 
     @Override
