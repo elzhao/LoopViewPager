@@ -514,6 +514,9 @@ public class LoopViewPager extends ViewGroup {
         } else if (item >= mAdapter.getCount()) {
             item = mAdapter.getCount() - 1;
         }
+        if (mCurItem == item) {
+            return;
+        }
         mCurItem = item;
         if (mFirstLayout) {
             mScrollPending = true;
@@ -521,12 +524,45 @@ public class LoopViewPager extends ViewGroup {
         }
         int scrollX = getScrollX();
         int firstVisiblePosition = scrollX / mChildMaxWidth;
-        if (scrollX < 0) {
+        if (scrollX < 0 && scrollX % mChildMaxWidth != 0) {
             firstVisiblePosition--;
         }
         int firstVisibleValidPosition = calculateValidPosition(firstVisiblePosition);
-        int actualDestPosition = firstVisiblePosition + item - firstVisibleValidPosition;
+        int dPos = item - firstVisibleValidPosition;
+        if (Math.abs(dPos) > mAdapter.getCount() / 2) {
+            dPos += -dPos / Math.abs(dPos) * mAdapter.getCount();
+        }
+        if (DEBUG) Lg.i("firstVisiblePosition: " + firstVisiblePosition + " - firstVisibleValidPosition: " + firstVisibleValidPosition + " - dPos: " + dPos);
+        int actualDestPosition = firstVisiblePosition + dPos;
         setCurrentItemInternal(actualDestPosition, smoothScroll, false);
+    }
+
+    public void prevItem() {
+        setCurrentItemInternal(-1);
+    }
+
+    public void nextItem() {
+        setCurrentItemInternal(1);
+    }
+
+    private void setCurrentItemInternal(int step) {
+        if (mAdapter == null || mAdapter.getCount() == 0) {
+            return;
+        }
+        mCurItem += step;
+        if (mCurItem < 0) {
+            mCurItem += mAdapter.getCount();
+        } else if (mCurItem >= mAdapter.getCount()) {
+            mCurItem -= mAdapter.getCount();
+        }
+        if (mFirstLayout) {
+            mScrollPending = true;
+            return;
+        }
+        int scrollX = getScrollX();
+        int firstVisiblePosition = scrollX / mChildMaxWidth;
+        int actualDestPosition = firstVisiblePosition + step;
+        setCurrentItemInternal(actualDestPosition, true, false);
     }
 
     private void setCurrentItemInternal(int position, boolean smoothScroll, boolean fromUser) {

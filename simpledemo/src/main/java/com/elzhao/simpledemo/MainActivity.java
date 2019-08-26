@@ -2,6 +2,7 @@ package com.elzhao.simpledemo;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.view.View;
 
 import com.elzhao.loopviewpager.LoopViewPager;
 import com.elzhao.loopviewpager.ScaleTransfer;
@@ -10,7 +11,7 @@ import com.elzhao.loopviewpager.log.Lg;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends Activity implements LoopViewPager.OnPageChangeListener {
+public class MainActivity extends Activity implements LoopViewPager.OnPageChangeListener, SimpleAdapter.OnItemClickListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -28,7 +29,7 @@ public class MainActivity extends Activity implements LoopViewPager.OnPageChange
         }
 
         mLoopViewPager = (LoopViewPager) findViewById(R.id.loopViewPager);
-        mAdapter = new SimpleAdapter(this, mDataList);
+        mAdapter = new SimpleAdapter(this, mDataList, this);
         mLoopViewPager.setAdapter(mAdapter);
         mLoopViewPager.addOnPageChangeListener(this);
         mLoopViewPager.setPageTransformer(new ScaleTransfer());
@@ -43,5 +44,15 @@ public class MainActivity extends Activity implements LoopViewPager.OnPageChange
     @Override
     public void onPageSelected(int position, boolean fromUser) {
         Lg.i("position: " + position + " - fromUser: " + fromUser);
+    }
+
+    @Override
+    public void onItemClick(View view, int position) {
+        Lg.i("position: " + position);
+        position --;
+        if (position < 0) {
+            position += mAdapter.getCount();
+        }
+        mLoopViewPager.setCurrentItem(position);
     }
 }

@@ -16,10 +16,12 @@ public class SimpleAdapter extends LoopPagerAdapter<SimpleAdapter.SimpleHolder> 
 
     private Context mContext;
     private List<String> mDataList;
+    private OnItemClickListener mOnItemClickListener;
 
-    SimpleAdapter(Context context, List<String> dataList) {
+    SimpleAdapter(Context context, List<String> dataList, OnItemClickListener l) {
         mContext = context;
         mDataList = dataList;
+        mOnItemClickListener = l;
     }
 
     @Override
@@ -34,13 +36,15 @@ public class SimpleAdapter extends LoopPagerAdapter<SimpleAdapter.SimpleHolder> 
     }
 
     @Override
-    public void onBindViewHolder(SimpleAdapter.SimpleHolder viewHolder, final int position) {
+    public void onBindViewHolder(final SimpleAdapter.SimpleHolder viewHolder, final int position) {
         String content = mDataList.get(position);
         viewHolder.tvContent.setText(content);
         viewHolder.getItemView().setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Lg.i("position: " + position);
+                if (mOnItemClickListener != null) {
+                    mOnItemClickListener.onItemClick(viewHolder.getItemView(), position);
+                }
             }
         });
     }
@@ -58,5 +62,9 @@ public class SimpleAdapter extends LoopPagerAdapter<SimpleAdapter.SimpleHolder> 
             super(itemView);
             tvContent = (TextView) itemView.findViewById(R.id.tv_content);
         }
+    }
+
+    public interface OnItemClickListener{
+        void onItemClick(View view, int position);
     }
 }
