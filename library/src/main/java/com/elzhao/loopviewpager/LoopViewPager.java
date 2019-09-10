@@ -619,11 +619,25 @@ public class LoopViewPager extends ViewGroup {
         return mCurItem;
     }
 
+    public <VH extends ViewHolder> VH findViewHolderByPosition(int position) {
+        for (ViewHolder vh:mShowViewList) {
+            int validPos = calculateValidPosition(vh.position);
+            if (validPos == position) {
+                //noinspection unchecked
+                return (VH) vh;
+            }
+        }
+        return null;
+    }
+
     public void setPageTransformer(PageTransformer transformer) {
         mPageTransformer = transformer;
     }
 
     private void dataSetChanged() {
+        if (mFirstLayout) {
+            return;
+        }
         updateShowList();
         bindViewHolder();
         addChildViews();
